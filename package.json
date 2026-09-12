@@ -1,0 +1,16 @@
+{
+  "name": "carpool-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:mobile": "npm run start -w apps/mobile",
+    "db:types": "supabase gen types typescript --linked --schema public > packages/shared/src/database.types.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

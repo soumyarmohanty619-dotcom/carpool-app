@@ -1,0 +1,2 @@
+-- Phase 1: no seed data yet. Ride/vehicle fixtures arrive with the Phase 2 UI
+-- once there's something to browse them with.
