@@ -3,9 +3,15 @@
 Monorepo for the carpool app: an Expo mobile app, a Next.js web app, and the
 Supabase backend (Postgres + PostGIS, Auth, Storage, Realtime) they share.
 
-This is **Phase 1**: database schema, row-level security, and the
-sign up → confirm email → pick rider/driver → home flow. There's no ride
-posting, search, or booking UI yet — that's Phase 2.
+Phases 1-3 are done:
+
+- **Phase 1** — database schema, row-level security, and the
+  sign up → confirm email → pick rider/driver → home flow.
+- **Phase 2** — ride posting/search, booking requests, and the
+  accept/decline/cancel/complete flow, with atomic (trigger-governed) seat
+  accounting so concurrent accepts can never oversell a ride.
+- **Phase 3** — post-trip ratings, and a manual "mark as paid" stub in place
+  of real Stripe processing until API keys are available.
 
 ## Layout
 
@@ -39,9 +45,10 @@ supabase/      SQL migrations, applied via the Supabase CLI
    supabase db push
    ```
    `<your-project-ref>` is the id in your project's dashboard URL. This runs
-   the three migrations in `supabase/migrations/` against your project:
-   schema, row-level security policies, and the auth trigger that creates a
-   `profiles` row on signup.
+   the migrations in `supabase/migrations/` against your project: schema,
+   row-level security policies, the auth trigger that creates a `profiles`
+   row on signup, ride/booking/seat-accounting changes, and the ratings
+   payment-stub column.
 
    (Developing against a local Postgres instead? `supabase start` spins one
    up in Docker, and `supabase db reset` applies the migrations to it.)
@@ -60,21 +67,27 @@ supabase/      SQL migrations, applied via the Supabase CLI
 
 ## Smoke test
 
-On either app: sign up with an email/password, confirm the account via the
-email Supabase sends, sign in, pick rider and/or driver on the role-selection
-screen, and land on the placeholder home screen. In the Supabase dashboard's
-Table Editor, confirm a matching row appeared in `profiles` right after
-signup (that's the auth trigger working) and that its `roles` column updated
-after you picked a role.
+On either app:
+
+1. Sign up with an email/password, confirm the account via the email
+   Supabase sends, sign in, and pick rider and/or driver on the
+   role-selection screen.
+2. As a driver, post a ride from the home screen.
+3. As a rider (a second account), find that ride and request a seat.
+4. As the driver, accept the request from "My rides" — confirm
+   `seats_available` on the ride drops accordingly in the Supabase
+   dashboard's Table Editor, and try over-booking past capacity to confirm
+   it's rejected.
+5. Mark the ride/booking completed, then use "Mark as paid" and leave a
+   rating from both sides in "My bookings" / "My rides".
 
 ## Known limitations (by design, not bugs)
 
 - **Phone OTP** screens are wired in code but won't deliver real SMS until
-  Twilio is configured as an SMS provider in Supabase Auth settings — a
-  later phase.
-- **`profiles` is only readable by its owner.** Fine for Phase 1 (no one
-  else needs to see it yet); Phase 2's ride listings will need a
-  `public_profiles` view or a broadened policy to show a driver's name.
-- **Seat counts aren't decremented anywhere yet** — there's no booking UI
-  to trigger it. When Phase 2 adds one, do it via a `SECURITY DEFINER` RPC,
-  not a client-side update, so two riders can't race past the same seat.
+  Twilio is configured as an SMS provider in Supabase Auth settings.
+- **"Mark as paid" is a manual stub**, not real payment processing — it just
+  sets `bookings.paid_at`. Swapping in real Stripe later only means changing
+  how `paid_at` gets set; everything reading it stays the same.
+- **No geocoding provider is configured yet**, so ride search is by text +
+  time window rather than distance — `origin_geog`/`destination_geog` stay
+  unset until one is wired in.
