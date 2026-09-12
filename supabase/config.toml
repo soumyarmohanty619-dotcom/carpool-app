@@ -30,3 +30,11 @@ enable_confirmations = true
 [auth.sms]
 enable_signup = false
 enable_confirmations = false
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.stripe-webhook]
+# Stripe calls this with no Supabase JWT — it authenticates via its own
+# Stripe-Signature header instead (verified in the function itself).
+verify_jwt = false

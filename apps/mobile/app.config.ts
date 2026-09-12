@@ -16,7 +16,7 @@ const config: ExpoConfig = {
   android: {
     package: "com.carpoolapp.mobile",
   },
-  plugins: ["expo-router"],
+  plugins: ["expo-router", "expo-web-browser"],
 };
 
 export default config;

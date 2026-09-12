@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function MarkPaidButton({ bookingId }: { bookingId: string }) {
-  const router = useRouter();
   const supabase = createClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,16 +11,16 @@ export function MarkPaidButton({ bookingId }: { bookingId: string }) {
   async function handleClick() {
     setSubmitting(true);
     setError(null);
-    const { error: updateError } = await supabase
-      .from("bookings")
-      .update({ paid_at: new Date().toISOString() })
-      .eq("id", bookingId);
-    setSubmitting(false);
-    if (updateError) {
-      setError(updateError.message);
+    const { data, error: invokeError } = await supabase.functions.invoke<{ url: string }>(
+      "create-checkout-session",
+      { body: { bookingId, returnBaseUrl: window.location.origin } }
+    );
+    if (invokeError || !data?.url) {
+      setSubmitting(false);
+      setError(invokeError?.message ?? "Could not start checkout.");
       return;
     }
-    router.refresh();
+    window.location.href = data.url;
   }
 
   return (
@@ -33,7 +31,7 @@ export function MarkPaidButton({ bookingId }: { bookingId: string }) {
         disabled={submitting}
         className="rounded-md border border-neutral-300 px-2 py-1 text-xs font-medium disabled:opacity-50"
       >
-        {submitting ? "…" : "Mark as paid"}
+        {submitting ? "…" : "Pay now"}
       </button>
     </div>
   );
